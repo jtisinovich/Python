@@ -1,0 +1,176 @@
+Created on Tue Aug  4 21:55:54 2020
+
+@author: jtisi
+"""
+
+import pandas as pd
+import requests  
+import json
+
+def getDaily(simbol, size):
+    function = "TIME_SERIES_DAILY"
+    token = "XXXXXXXXXXXXXXX"
+    url = "https://www.alphavantage.co/query"
+    parametros = {"function" : function, "symbol" : symbol, 
+              "outputsize" : size, "datatype" : "json", "apikey" : token}
+
+    r = requests.get(url, params = parametros)
+
+    data = r.json()["Time Series (Daily)"]
+    df_data = pd.DataFrame.from_dict(data, orient = "index")
+    df_data = df_data.astype("float")
+    df_data.index.name = "Date"
+    df_data.columns = ["Open", "High", "Low", "Close", "Volume"]
+    df_data = df_data.sort_values("Date", ascending = True)
+    df_data.index = pd.to_datetime(df_data.index)
+    return df_data
+
+
+def getIntra(simbol, size):
+    function = "TIME_SERIES_INTRADAY"
+    interval = "5min"
+    token = "XXXXXXXXXXXXXXX"
+    url = "https://www.alphavantage.co/query"
+    parametros = {"function" : function, "symbol" : simbol, 
+              "outputsize" : size, "interval" : interval, "datatype" : "json", "apikey" : token}
+
+    r = requests.get(url, params = parametros)
+
+    data = r.json()["Time Series (5min)"]
+    df_data = pd.DataFrame.from_dict(data, orient = "index")
+    df_data = df_data.astype("float")
+    df_data.index.name = "Date"
+    df_data.columns = ["Open", "High", "Low", "Close", "Volume"]
+    df_data = df_data.sort_values("Date", ascending = True)
+    df_data.index = pd.to_datetime(df_data.index)
+    return df_data
+
+
+def getDailyAdj(simbol, size= "compact"):
+    "Obtiene DataFrame con serie de tiempo ajustada - Parametros: simbolo - Tamaño"
+    
+    function = "TIME_SERIES_DAILY_ADJUSTED"
+    token = "XXXXXXXXXXXXXXX"
+    url = "https://www.alphavantage.co/query"
+    parametros = {"function" : function, "symbol" : simbol, 
+              "outputsize" : size, "datatype" : "json", "apikey" : token}
+
+    r = requests.get(url, params = parametros)
+
+    data = r.json()["Time Series (Daily)"]
+    df_data = pd.DataFrame.from_dict(data, orient = "index")
+    df_data = df_data.astype("float")
+    df_data.index.name = "Date"
+    df_data.columns = ["Open", "High", "Low", "Close", "AdjClose", "Volume", "Div", "Split"]
+    df_data = df_data.sort_values("Date", ascending = True)
+    df_data.index = pd.to_datetime(df_data.index)
+    
+    return df_data
+
+
+def quote(symbol):
+    "Obtiene diccionario Cotización del simbolo pasado como parametro"
+    function = "GLOBAL_QUOTE"
+    token = "XXXXXXXXXXXXXXX"
+    url = "https://www.alphavantage.co/query"
+    parametros = {"function" : function, "symbol" : symbol, 
+              "apikey" : token}
+
+    r = requests.get(url, params = parametros)
+    r = r.json()
+    
+    return r
+
+def fx(fromC, toC):
+    function = "CURRENCY_EXCHANGE_RATE"
+    token = "XXXXXXXXXXXXXXX"
+    url = "https://www.alphavantage.co/query"
+    parametros = {"function" : function, "from_currency":fromC, "to_currency":toC, 
+              "apikey" : token}
+
+    r = requests.get(url, params = parametros)
+    return r.json()
+
+
+def fxIntra(fromC, toC):
+    function = "FX_INTRADAY"
+    token = "XXXXXXXXXXXXXXX"
+    interval = "60min"
+    url = "https://www.alphavantage.co/query"
+    parametros = {"function" : function, "from_symbol":fromC, "to_symbol":toC, 
+              "interval" : interval, "apikey" : token}
+
+    r = requests.get(url, params = parametros)
+    data = r.json()["Time Series FX (60min)"]
+    df_data = pd.DataFrame.from_dict(data, orient = "index")
+    df_data = df_data.astype("float")
+    df_data.index.name = "Date"
+    df_data.columns = ["Open", "High", "Low", "Close"]
+    df_data = df_data.sort_values("Date", ascending = True)
+    df_data.index = pd.to_datetime(df_data.index)
+    return df_data
+
+
+def SMA(symbol, interval, series_type, time_period):
+    "Obtiene DataFrame con Media Movil Simple de papeles - No funciona papeles arg."
+    function = "SMA"
+    token = "XXXXXXXXXXXXXXX"
+    url = "https://www.alphavantage.co/query"
+    parametros = {"function" : function, "symbol" : symbol, "interval" : interval,
+                  "series_type" : series_type, "time_period" : time_period, "apikey" : token}
+    r = requests.get(url, params = parametros)
+    js = r.json()["Technical Analysis: SMA"]
+    df_data = pd.DataFrame.from_dict(js, orient = "index")
+    return df_data
+
+
+def ADX(symbol, interval, time_period):
+    "Obtiene indicador ADX"
+    function = "ADX"
+    token = "XXXXXXXXXXXXXXX"
+    url = "https://www.alphavantage.co/query"
+    parametros = {"function" : function, "symbol" : symbol, "interval" : interval,
+                  "time_period" : time_period, "apikey" : token}
+    r = requests.get(url, params = parametros)
+    js = r.json()["Technical Analysis: ADX"]
+    df_data = pd.DataFrame.from_dict(js, orient = "index")
+    return df_data
+
+
+def CCI(symbol, interval, time_period):
+    "Obtiene indicador CCI"
+    function = "CCI"
+    token = "XXXXXXXXXXXXXXX"
+    url = "https://www.alphavantage.co/query"
+    parametros = {"function" : function, "symbol" : symbol, "interval" : interval,
+                  "time_period" : time_period, "apikey" : token}
+    r = requests.get(url, params = parametros)
+    js = r.json()["Technical Analysis: CCI"]
+    df_data = pd.DataFrame.from_dict(js, orient = "index")
+    return df_data
+
+
+def AROON(symbol, interval, time_period):
+    "Obtiene indicador AROON"
+    function = "AROON"
+    token = "XXXXXXXXXXXXXXX"
+    url = "https://www.alphavantage.co/query"
+    parametros = {"function" : function, "symbol" : symbol, "interval" : interval,
+                  "time_period" : time_period, "apikey" : token}
+    r = requests.get(url, params = parametros)
+    js = r.json()["Technical Analysis: AROON"]
+    df_data = pd.DataFrame.from_dict(js, orient = "index")
+    return df_data
+
+
+
+def sectores():
+    "Obtiene Sectores"
+    function = "SECTOR"
+    token = "XXXXXXXXXXXXXXX"
+    url = "https://www.alphavantage.co/query"
+    parametros = {"function" : function, "apikey" : token}
+    r = requests.get(url, params = parametros)
+    js = r.json()["Rank A: Real-Time Performance"]
+    df_data = pd.DataFrame.from_dict(js, orient = "index")
+    return df_data
