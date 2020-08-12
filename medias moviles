@@ -1,0 +1,58 @@
+Created on Sat Aug  8 17:20:13 2020
+
+@author: jtisi
+"""
+
+import talib as ta
+import yfinance as yf
+import matplotlib.pyplot as plt
+import pandas as pd
+import datetime as dt
+
+tickers = ["YPFD.BA", "GGAL.BA", "PAMP.BA"]
+dic = {}
+for ticker in tickers:
+    data = yf.download(ticker, period = "3y", interval = "1d", auto_adjust = True)
+    data["SMA20"] = ta.EMA(data["Close"], timeperiod = 20)
+    data["SMA5"] = ta.EMA(data["Close"], timeperiod = 5)
+    data["CrucePos"] = (data.SMA5 > data.SMA20) & (data.SMA5.shift() < data.SMA20.shift()) 
+    data["CruceNeg"] = (data.SMA5 < data.SMA20) & (data.SMA5.shift() > data.SMA20.shift())
+    data["Yield"] = ((data.Close / data["Close"].shift()- 1)*100)
+    
+    estado = "esperar"
+    Compras = []
+    fecha_compra = []
+    fecha_venta = []
+    Ventas = []
+
+
+    for i in range(0, len(data)):
+        if data.iloc[i]["CrucePos"] == True and estado == "esperar":
+            estado = "Comprado"
+            Compras.append(data.iloc[i]["Close"])
+            fecha_compra.append(data.index[i])
+            a = a - (data.iloc[i]["Close"])        
+        if data.iloc[i]["CruceNeg"] == True and estado == "Comprado":
+            Ventas.append(data.iloc[i]["Close"])
+            fecha_venta.append(data.index[i])
+            estado = "esperar"
+
+    if len(Compras) > len(Ventas):
+        fecha_venta.append(0)
+        Ventas.append(0)
+        Compras[-1] = 0
+    
+    tabla = pd.DataFrame()
+    tabla["Fecha Compra"] = fecha_compra
+    tabla["Precio Compra"] = Compras
+    tabla["Fecha Venta"] = fecha_venta
+    tabla["Precio Venta"] = Ventas
+    tabla["Resultado Trade"] = tabla["Precio Venta"] - tabla["Precio Compra"]
+    tabla["Yield"] = (((tabla["Precio Venta"] / tabla["Precio Compra"])-1)*100)
+    dic[ticker] = tabla
+
+    plt.figure(figsize=(12,5))
+    f1 = plt.plot(data.Close, lw=1.5)
+    f2 = plt.plot(data.SMA5, lw=0.7)
+    f3 = plt.plot(data.SMA20, lw=0.5)
+    #plt.plot(data.index, data.CrucePos, "^", markersize=10)
