@@ -31,7 +31,7 @@ for ticker in tickers:
             estado = "Comprado"
             Compras.append(data.iloc[i]["Close"])
             fecha_compra.append(data.index[i])
-            a = a - (data.iloc[i]["Close"])        
+             
         if data.iloc[i]["CruceNeg"] == True and estado == "Comprado":
             Ventas.append(data.iloc[i]["Close"])
             fecha_venta.append(data.index[i])
