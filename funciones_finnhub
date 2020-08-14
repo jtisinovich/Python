@@ -1,0 +1,52 @@
+Created on Fri Aug  7 23:45:38 2020
+
+@author: jtisi
+"""
+
+import requests
+import pandas as pd
+import json
+
+
+def getSymbols(exchange):
+    "Obtiene simbolos de mercados"
+    TOKEN = "xxxxxxxxxxxxxxxxxxxx"
+    url = "http://finnhub.io/api/v1/stock/symbol"
+    p ={"token": TOKEN, "exchange":exchange}
+    r = requests.get(url, params = p)
+    js = r.json()
+    df = pd.DataFrame(js)
+    return df
+
+
+
+
+def getPeers(symbol):
+    "Obtiene pares similares de acciones por rubro"
+    TOKEN = "xxxxxxxxxxxxxxxxxxxxxxx"
+    url = "http://finnhub.io/api/v1/stock/peers"
+    p ={"token": TOKEN, "symbol":symbol}
+    r = requests.get(url, params = p)
+    js = r.json()
+    df = pd.DataFrame(js)
+    return df
+
+
+def getMetrics(symbol, metric):
+    "Obtiene métricas de análisis fundamental (price, valuation, growth, margin, FinancialStrength, management, perShare)"
+    TOKEN = "xxxxxxxxxxxxxxxxxxx"
+    url = "http://finnhub.io/api/v1/stock/metric"
+    p ={"token": TOKEN, "symbol":symbol, "metric":metric}
+    r = requests.get(url, params = p)
+    js = r.json()
+    df = pd.DataFrame(js)
+    return df
+
+def getQuote(symbol):
+    TOKEN = "xxxxxxxxxxxxxxxxxx"
+    url = "https://finnhub.io/api/v1/quote?symbol="+symbol+"&token=bsn13anrh5ret9gkbcg0"
+    #p ={"token": TOKEN, "symbol":symbol}
+    r = requests.get(url).json()
+    #js = r.json()
+    
+    return r
