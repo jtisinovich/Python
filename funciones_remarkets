@@ -1,0 +1,101 @@
+import requests
+import pandas as pd
+
+
+def pedirToken():
+    usuario = "xxxxxxxxxxxxxxx"
+    password = "xxxxxx"
+    r = requests.post(url = "https://api.remarkets.primary.com.ar/auth/getToken", 
+                      headers = {"X-Username" : usuario, "X-Password" : password})
+    return r.headers["X-Auth-Token"]
+
+token = pedirToken()
+
+
+def getSegment():
+    "Devuelve Dataframe con segmentos de mercado"
+    url = "https://api.remarkets.primary.com.ar/rest/segment/all"
+    r = requests.get(url, headers ={"X-Auth-Token" : token})
+    r = r.json()
+    df_seg = pd.DataFrame.from_dict(r["segments"])
+    return df_seg
+
+
+def getInstruments_byCFI(CFI):
+    
+    " DBXXXX: Bonos Byma, EMXXXX: CEDEARS Byma, ESXXXX: Acciones Byma, FXXXSX: Futuros Agro y Financieros"
+    "FXXXXX : Futuros Agro, LRSTXH: Repos, OCAFXS: Opciones sobre subyacentes agro"
+    "OCASPS: Opciones sobre subyacentes financieros"
+    
+      
+    p = {"CFICode" : CFI}
+    url = "https://api.remarkets.primary.com.ar/rest/instruments/byCFICode"
+    r = requests.get(url = url, headers = {"X-Auth-Token" : token}, params = p)
+    r = r.json()
+    df = pd.DataFrame(r["instruments"])
+    return df
+
+
+
+
+
+def dataHist(symbol, dateFrom, dateTo= ""):
+    "Devuelve DataFrame con información histórica entre fechas, si no se incluye dateTo envía sólo el día dateFrom"
+    if dateTo == "":
+        p ={"marketId" : "ROFX",
+        "symbol" : symbol,
+        "date" : dateFrom}
+    else:
+        p ={"marketId" : "ROFX",
+        "symbol" : symbol,
+        "dateFrom" : dateFrom,
+        "dateTo" : dateTo}
+        
+    token = pedirToken()
+    url = "https://api.remarkets.primary.com.ar/rest/data/getTrades"
+    r = requests.get(url = url, headers = {"X-Auth-Token" : token}, params = p)
+    r = r.json()
+    data = r["trades"]
+    df = pd.DataFrame(data)
+    return df
+
+
+
+def OrdenRofex(tipo, cantidad, precio):
+    p = {"marketId" : "ROFX",
+          "symbol" : "RFX20Sep20",
+          "price" : precio,
+          "orderQty" : cantidad,
+          "ordType" : "limit",
+          "side" : tipo,
+          "timeInForce" : "Day",
+          "account" : "xxxxxx"}
+    
+    url = "https://api.remarkets.primary.com.ar/rest/order/newSingleOrder"
+    r = requests.get(url = url, headers = {"X-Auth-Token" : token}, params = p)
+    r = r.json()
+    return r
+
+
+def orderStatus(params):
+    url = "https://api.remarkets.primary.com.ar/rest/order/id"
+    r = requests.get(url = url, headers = {"X-Auth-Token" : token}, params = params)
+    r = r.json()
+    return r
+
+
+def OrdenesEjecutadas():
+    cuenta = "xxxxxxx"
+    url = "https://api.remarkets.primary.com.ar/rest/order/filleds/"
+    p = {"accountId" : cuenta}
+    r = requests.get(url = url, headers = {"X-Auth-Token" : token}, params = p)
+    r = r.json()
+    op = pd.DataFrame.from_dict(r["orders"])
+    tabla = pd.DataFrame()
+    tabla["Fecha"] = op["transactTime"]
+    tabla["Ticker"] = op["instrumentId"]["symbol"]
+    tabla["Cantidad"] = op["orderQty"]
+    tabla["Precio"] = op["price"]
+    tabla["Obs"] = op["text"]
+    
+    return tabla
