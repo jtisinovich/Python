@@ -1,0 +1,28 @@
+Created on Thu Aug 20 22:28:50 2020
+
+@author: jtisi
+"""
+
+import pandas as pd
+import matplotlib.pyplot as plt
+
+
+
+df = pd.read_excel("variacion_salarios.xlsx")
+
+df["EVOL SPR"] = df["Sector privado registrado"] / df["Sector privado registrado"].shift(12)
+
+df["EVOL SP"] = df["Sector público"] / df["Sector público"].shift(12)
+
+df["EVOL SPR NR"] = df["Sector privado no registrado"] / df["Sector privado no registrado"].shift(12)
+
+df.dropna(axis = 0, inplace = True)
+
+
+fig = plt.figure(figsize=(8, 4)).suptitle("Variación Interanual de salarios")
+
+f1 = plt.plot(df.PERIODO, df["EVOL SPR"])
+f2 = plt.plot(df.PERIODO, df["EVOL SP"])
+f1 = plt.plot(df.PERIODO, df["EVOL SPR NR"])
+#plt.ylabel("Variación Interanual")
+plt.legend(["EVOLUCION SECTOR PRIVADO", "EVOLUCION SECTOR PUBLICO", "EVOLUCION SEC PRIVADO NO REGISTRADO"], loc = "lower right")
