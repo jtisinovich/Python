@@ -1,0 +1,62 @@
+import requests
+import datetime as dt
+
+
+tk = pedirToken()
+
+def pedirToken():
+    url ="https://api.invertironline.com/token"
+    data = {"username" : "xxxxxxxxxxxx", "password" : "xxxxxxxxxxx", "grant_type" : "password"}
+    r = requests.post(url = url, data = data).json()
+    return r
+
+def actualizarToken(tk):
+    
+    exp = dt.datetime.strptime(tk[".expires"], "%a, %d %b %Y %H:%M:%S GMT")
+    ahora = dt.datetime.utcnow()
+    tiempo = exp - ahora
+    dias = tiempo.days
+    
+    if checkToken(tk).days ==0:
+        tokenOk = tk
+    else:
+        tokenOk = pedirToken()
+        
+    return tokenOk
+
+def checkToken(tk):
+    exp = dt.datetime.strptime(tk[".expires"], "%a, %d %b %Y %H:%M:%S GMT")
+    ahora = dt.datetime.utcnow()
+    tiempo = exp - ahora
+    return tiempo
+
+
+def precio(ticker):
+    global tk
+    tk = actualizarToken(tk)
+    url_base = "https://api.invertironline.com/api/v2/"
+    endpoint = "bCBA" + "/Titulos/" + ticker + "/Cotizacion"
+    url = url_base + endpoint
+    headers = {"Authorization" : "Bearer " + tk["access_token"]}
+    data = requests.get(url = url, headers = headers).json()
+    return data
+
+tickers = ["ALUA", "BBAR", "BMA", "BYMA", "CEPU", "COME", "CRES", "CVH", "GGAL", "LOMA",
+           "MIRG", "PAMP", "SUPV", "TECO2", "TGNO4", "TGSU2", "TRAN", "TXAR",
+           "VALO", "YPFD"]
+
+cantidad = [64.026921, 16.292535, 26.509177, 6.027362, 85.921043, 200.189866,
+            25.615255, 2.669259, 91.054145, 18.755399, 1.6798, 93.392315,
+            23.551531, 7.854211, 6.984776, 15.809485, 16.735256, 66.98404,
+            66.653312, 15.243066]
+
+
+while True:
+    
+    spot = 0
+    contador = 0
+    for i in tickers:
+        spot = spot + (precio(i)["ultimoPrecio"] * cantidad[contador])
+        contador = contador + 1
+    
+    print("Spot IRofex: " + str(spot))
