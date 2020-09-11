@@ -1,14 +1,23 @@
 import requests
 import datetime as dt
+import xlwings as xw
+from xlwings import constants
+import pandas as pd
+import time
 
-
-tk = pedirToken()
 
 def pedirToken():
     url ="https://api.invertironline.com/token"
-    data = {"username" : "xxxxxxxxxxxx", "password" : "xxxxxxxxxxx", "grant_type" : "password"}
+    data = {"username" : "xxxxxxxxxxxxxx", "password" : "xxxxxxxxxxxxxxxxxx", "grant_type" : "password"}
     r = requests.post(url = url, data = data).json()
     return r
+
+def pedirTokenRem():
+    usuario = "xxxxxxxxxxxxxxxxxx"
+    password = "xxxxxxxxxxxxxxxxx"
+    r = requests.post(url = "https://api.remarkets.primary.com.ar/auth/getToken", 
+                      headers = {"X-Username" : usuario, "X-Password" : password})
+    return r.headers["X-Auth-Token"]
 
 def actualizarToken(tk):
     
@@ -41,6 +50,18 @@ def precio(ticker):
     data = requests.get(url = url, headers = headers).json()
     return data
 
+
+def marketData(p):
+    global tkr
+    url = "https://api.remarkets.primary.com.ar/rest/marketdata/get"
+    r = requests.get(url = url, headers = {"X-Auth-Token" : tkr}, params = p)
+    r = r.json()
+    data = r["marketData"]
+    return data
+
+tk = pedirToken()
+tkr = pedirTokenRem()
+
 tickers = ["ALUA", "BBAR", "BMA", "BYMA", "CEPU", "COME", "CRES", "CVH", "GGAL", "LOMA",
            "MIRG", "PAMP", "SUPV", "TECO2", "TGNO4", "TGSU2", "TRAN", "TXAR",
            "VALO", "YPFD"]
@@ -50,13 +71,60 @@ cantidad = [64.026921, 16.292535, 26.509177, 6.027362, 85.921043, 200.189866,
             23.551531, 7.854211, 6.984776, 15.809485, 16.735256, 66.98404,
             66.653312, 15.243066]
 
+params = {"marketId" : "ROFX", "symbol" : "RFX20Sep20", "entries" : "LA", "depth" : 1}
+vencimiento = dt.date(2020, 9, 30)
+dias = vencimiento - dt.date.today()
+dias = dias.days
 
-while True:
-    
-    spot = 0
+
+def datos():
     contador = 0
     for i in tickers:
-        spot = spot + (precio(i)["ultimoPrecio"] * cantidad[contador])
+        tabla["precio"].iloc[contador] = precio(i)["ultimoPrecio"]
         contador = contador + 1
+    futuro = marketData(params)["LA"]["price"]
+    return futuro
+
+filas = 0
+wb = xw.Book('streaming_spot.xlsx')
+hoja = wb.sheets('Spot')
+
+hoja.range('A2:E2').api.Font.Bold = True 
+hoja.range("A2:E2").color = xw.utils.rgb_to_int((220, 220, 220))
+hoja.range("A2").value = "ACCIÓN"
+hoja.range("B2").value = "CANTIDAD"
+hoja.range("C2").value = "PRECIO"
+hoja.range("D2").value = "VALOR ROFEX"
+hoja.range("E2").value = "% ROFEX"
+tabla = pd.DataFrame()
+tabla["tickers"] = tickers
+tabla["cantidad"] = cantidad
+tabla["precio"] = 0
+
+while True:
+    filas = 1
+    filas = filas + 1    
+    futuro = datos()
+    tabla["valor_rofex"] = tabla.precio * tabla.cantidad
+    tabla["porcentaje"] = (tabla["valor_rofex"] / tabla["valor_rofex"].sum())*100
     
-    print("Spot IRofex: " + str(spot))
+    
+    for i in range(0, len(tickers)):
+        filas = filas + 1
+        hoja.range("A"+str(filas)).value = tickers[i]
+        hoja.range("B"+str(filas)).value = cantidad[i]
+        hoja.range("C"+str(filas)).value = tabla.precio.iloc[i]
+        hoja.range("D"+str(filas)).value = tabla.valor_rofex[i].round(2)
+        hoja.range("E"+str(filas)).value = tabla.porcentaje[i].round(2)
+        
+    tasa = ((((futuro / tabla.valor_rofex.sum())-1) / dias * 365)*100).round(2)
+    hoja.range("G2").value = "SPOT ROFEX"
+    hoja.range("H2").value = "RFX20SEP20"
+    hoja.range("G5").value = "TASA"
+    hoja.range("G5").color = xw.utils.rgb_to_int((220, 220, 220))
+    hoja.range("G2:H2").color = xw.utils.rgb_to_int((220, 220, 220))
+    hoja.range("G3").value = tabla.valor_rofex.sum().round(2)
+    hoja.range("H3").value = futuro
+    hoja.range("H5").value = tasa
+    print("Spot: " + str(tabla.valor_rofex.sum().round(2)) + "    Futuro: " + str(futuro) + "     Interes: " + str(tasa))
+    
