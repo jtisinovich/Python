@@ -20,12 +20,10 @@ def pedirTokenRem():
     return r.headers["X-Auth-Token"]
 
 def actualizarToken(tk):
-    
     exp = dt.datetime.strptime(tk[".expires"], "%a, %d %b %Y %H:%M:%S GMT")
     ahora = dt.datetime.utcnow()
     tiempo = exp - ahora
     dias = tiempo.days
-    
     if checkToken(tk).days ==0:
         tokenOk = tk
     else:
