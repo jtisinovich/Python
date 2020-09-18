@@ -1,0 +1,55 @@
+
+# Lee archivo xlsx emitido por AGIP de percepciones de Ingresos brutos y emite TXT para importar desde SIFERE WEB Convenio Multilateral
+# Modificar en excel tipo de comprobante "X" a "O"
+
+import pandas as pd
+
+archivo = "C:\\xxxxxxxxxxxxxxxxxxxxxx\\PERCEPCIONES.xlsx"
+
+df_percepciones = pd.read_excel(archivo)
+df_percepciones1 = pd.read_excel(archivo)
+df_percepciones['Fecha Comprobante'] = df_percepciones["Fecha Comprobante"].apply(lambda x: x.strftime('%d-%m-%Y'))
+# df_percepciones['Fecha Comprobante'] = pd.to_datetime(df_percepciones["Fecha Comprobante"])
+
+df_percepciones = df_percepciones.astype(str)
+
+df_percepciones.columns = ["CUIT", "NUMERO", "RAZON SOCIAL", "CERTIFICADO", "NORMA",
+                        "FECHA PERCEPCION", "TIPO", "COMPROBANTE", "FECHA COMPROBANTE",
+                        "MONTO", "BASE"]
+
+
+
+def cortar(cadena):
+    corta = cadena[-4:]
+    corta = "0001" + corta.rjust(8,"0")
+    return corta
+
+def completar(cadena):
+    cadena = cadena.rjust(12, "0")
+    return cadena
+
+def transforma(fecha):
+    dia = fecha[-2:]
+    mes = fecha[-5:-3]
+    año = fecha[-10:-6]
+    fecha = dia + "/" + mes + "/" + año
+    
+    return fecha
+
+prov = "90100"
+lis_cuit = list(df_percepciones.CUIT)
+lis_fecha = list(map(transforma, df_percepciones["FECHA PERCEPCION"]))
+listado_comprobante = list(df_percepciones["COMPROBANTE"])
+list_comprobante = list(map(cortar, listado_comprobante))
+lis_tipo = list(df_percepciones["TIPO"])
+lis_importe = list(map(completar,df_percepciones["MONTO"]))
+resumen = {"CUIT": lis_cuit, "FECHA": lis_fecha, "COMPROBANTE": list_comprobante,
+           "TIPO": lis_tipo, "IMPORTE": lis_importe}
+tabla = pd.DataFrame.from_dict(resumen)
+tabla["Registro"] = ("90100" + tabla.CUIT + tabla.FECHA + tabla.COMPROBANTE + 
+                     tabla.TIPO + "A" + tabla.IMPORTE)
+
+archivosalida = "C:\xxxxxxxxx\\PERCEPCIONESSALIDA.txt"
+tabla.Registro.to_csv(archivosalida, index=False, header=False)
+
+
