@@ -7,7 +7,6 @@ import pandas as pd
 archivo = "C:\\xxxxxxxxxxxxxxxxxxxxxx\\PERCEPCIONES.xlsx"
 
 df_percepciones = pd.read_excel(archivo)
-df_percepciones1 = pd.read_excel(archivo)
 df_percepciones['Fecha Comprobante'] = df_percepciones["Fecha Comprobante"].apply(lambda x: x.strftime('%d-%m-%Y'))
 # df_percepciones['Fecha Comprobante'] = pd.to_datetime(df_percepciones["Fecha Comprobante"])
 
