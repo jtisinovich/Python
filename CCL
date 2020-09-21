@@ -1,0 +1,7 @@
+años = 1
+
+ccl = pd.DataFrame()
+adr = yf.download("YPF", period= str(años)+'Y' , interval='1d')['Adj Close']
+local = yf.download("YPFD.BA", period=str(años)+'Y' , interval='1d')['Adj Close']
+ccl = (local / adr).to_frame()
+ccl.columns = ['CCL']
