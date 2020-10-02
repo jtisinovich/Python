@@ -1,0 +1,89 @@
+import pandas as pd
+import calendar
+import datetime as dt
+import yfinance as yf
+import matplotlib.pyplot as plt
+import requests
+import operator
+
+
+archivo = "C:\\xxxxxxxxxxlistacedears.xlsx"
+
+df_cedears = pd.read_excel(archivo)
+
+
+def getHist(symbolName):
+    url = "https://www.invertironline.com/api/cotizaciones/history?symbolName="
+    
+    d = dt.datetime.utcnow()
+    anterior = d - (dt.timedelta(days=30))
+    unixtime = str(calendar.timegm(d.utctimetuple()))
+    unixtime_desde = str(calendar.timegm(anterior.utctimetuple()))
+    end = "&exchange=BCBA&from=" + unixtime_desde + "&to=" + unixtime + "&resolution=D"
+    serie = (requests.get(url + symbolName + end)).json()
+    serie = pd.DataFrame.from_dict(serie)
+    
+    fecha = []
+    cierre = []
+    volumen = []
+    for i in range(0, len(serie)):
+        fecha.append((dt.datetime.fromtimestamp(serie.iloc[i][0]["time"]).date()))
+        cierre.append(serie.iloc[i][0]["close"])
+        volumen.append(serie.iloc[i][0]["volume"])
+    tabla = pd.DataFrame()
+    tabla["fecha"] = fecha
+    tabla["close"] = cierre
+    tabla["volume"] = volumen
+    return tabla.tail(20)
+
+tabla_cedears = pd.DataFrame()
+tablavolumen = []
+dicvolumen = {}
+
+for i in range(0, len(df_cedears)):
+    tabla_ced = pd.DataFrame()
+    tabla_ced = getHist(df_cedears.iloc[i]["Símbolo"])
+    
+    tabla_cedears[df_cedears.iloc[i]["Símbolo"]] = tabla_ced["close"]
+    #tabla_cedears[df_cedears.iloc[i]["Símbolo"] + " Volume"] = tabla_ced["volume"]
+    tablavolumen.append(tabla_ced["volume"].sum())
+    dicvolumen[df_cedears.iloc[i]["Símbolo"]] = tabla_ced["volume"].sum()
+años = 1
+
+ccl = pd.DataFrame()
+adr = yf.download("YPF", period= str(años)+'Y' , interval='1d')['Adj Close']
+local = yf.download("YPFD.BA", period=str(años)+'Y' , interval='1d')['Adj Close']
+ccl = (local / adr).to_frame()
+ccl.columns = ['CCL']
+ccl = ccl.dropna()
+
+tvolumen = sorted(dicvolumen.items(), key=operator.itemgetter(1), reverse=True)
+
+tabla_cedears["CCL"] = list(ccl.CCL.tail(20))
+
+correlaciones = tabla_cedears.corr(method = "pearson")
+correlaciones = correlaciones.sort_values(by="CCL", ascending = False)
+
+fig, axs = plt.subplots(nrows = 2, ncols = 3, figsize=(10,8))
+fig.autofmt_xdate() 
+
+axs[0][0].plot(tabla_cedears.index, ccl.CCL.tail(20), c = "r")
+axs[0][0].set_title("CCL")
+
+axs[0][1].plot(tabla_cedears.index, tabla_cedears[tvolumen[0][0]])
+axs[0][1].set_title(tvolumen[0][0])
+axs[0][1].legend(["Correlación: " + str(correlaciones[tvolumen[0][0]]["CCL"].round(2))])
+axs[0][2].plot(tabla_cedears.index, tabla_cedears[tvolumen[1][0]])
+axs[0][2].set_title(tvolumen[1][0])
+axs[0][2].legend(["Correlación: " + str(correlaciones[tvolumen[1][0]]["CCL"].round(2))])
+axs[1][0].plot(tabla_cedears.index, tabla_cedears[tvolumen[2][0]])
+axs[1][0].set_title(tvolumen[2][0])
+axs[1][0].legend(["Correlación: " + str(correlaciones[tvolumen[2][0]]["CCL"].round(2))])
+axs[1][1].plot(tabla_cedears.index, tabla_cedears[tvolumen[3][0]])
+axs[1][1].set_title(tvolumen[3][0])
+axs[1][1].legend(["Correlación: " + str(correlaciones[tvolumen[3][0]]["CCL"].round(2))])
+axs[1][2].plot(tabla_cedears.index, tabla_cedears[tvolumen[4][0]])
+axs[1][2].set_title(tvolumen[4][0])
+axs[1][2].legend(["Correlación: " + str(correlaciones[tvolumen[4][0]]["CCL"].round(2))])
+
+plt.show()
