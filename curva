@@ -1,0 +1,77 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+
+
+tabla = pd.read_html("https://www.rava.com/empresas/bonos.php")
+
+aj_cer = tabla[10]
+columnas = list(aj_cer.iloc[0])
+aj_cer.columns = columnas
+aj_cer.drop([0], axis = 0, inplace = True)
+aj_cer = aj_cer.drop(aj_cer[aj_cer["DM"] == "--"].index)
+aj_cer.reset_index(drop=True, inplace=True)
+pesos_tf = tabla[13]
+columnas = list(pesos_tf.iloc[0])
+pesos_tf.columns = columnas
+pesos_tf.drop([0], axis = 0, inplace = True)
+pesos_tf = pesos_tf.drop(pesos_tf[pesos_tf["DM"] == "--"].index)
+pesos_tf.reset_index(drop=True, inplace=True)
+pesos_tv = tabla[16]
+dolares_tf = tabla[19]
+columnas = list(dolares_tf.iloc[0])
+dolares_tf.columns = columnas
+dolares_tf.drop([0], axis = 0, inplace = True)
+dolares_tf = dolares_tf.drop(dolares_tf[dolares_tf["DM"] == "--"].index)
+dolares_tf = dolares_tf.drop(dolares_tf[dolares_tf["TIR"] == "--"].index)
+dolares_tf.reset_index(drop=True, inplace=True)
+
+
+
+def obtieneCoordenadas(tabla):
+    tabla['TIR'] = tabla['TIR'].map(lambda x: x.rstrip('%').rstrip('aAbBcC'))
+    tabla['TIR'] = tabla['TIR'].str.replace(",", ".").astype(float)
+    tabla["DM"] = tabla["DM"].astype(float)
+    tabla["DM"] = tabla["DM"] / 10
+    tabla["TIR"] = tabla["TIR"].astype(float)
+    x = np.array(list(tabla["DM"]))
+    y = np.array(list(tabla["TIR"]))
+    return x,y
+
+#Grafica curva Ajustada cer
+fig, axs = plt.subplots(nrows = 1, ncols = 2, figsize=(10,7))
+x, y  = obtieneCoordenadas(aj_cer)
+z = np.polyfit(x, y, 2, full=True)
+axs[0].plot(x, y, 'o')
+axs[0].set_title("PESOS AJUSTE POR CER")
+xp = np.linspace(0, 12, 100)
+coefs, error, *_ = z
+p = np.poly1d(coefs)
+ts = []
+for i in range(0, len(aj_cer)):
+    ts.append(axs[0].text(x[i], y[i], aj_cer.iloc[i]["Especie"]))
+axs[0].plot(xp, p(xp))
+axs[0].set_xlabel("DM")
+axs[0].set_ylabel("TIR")
+axs[0].grid()
+
+
+#Grafica curva dolar
+x, y  = obtieneCoordenadas(dolares_tf)
+z = np.polyfit(x, y, 2, full=True)
+axs[1].plot(x, y, 'o')
+axs[1].set_title("DOLAR TASA FIJA")
+xp = np.linspace(0, 9, 100)
+coefs, error, *_ = z
+p = np.poly1d(coefs)
+ts = []
+for i in range(0, len(dolares_tf)):
+    ts.append(axs[1].text(x[i], y[i], dolares_tf.iloc[i]["Especie"]))
+axs[1].plot(xp, p(xp), c = "r")
+axs[1].set_xlabel("DM")
+axs[1].set_ylabel("TIR")
+axs[1].grid()
+
+
+plt.show()
+    
