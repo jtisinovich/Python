@@ -1,0 +1,177 @@
+import requests
+import pandas as pd
+import yfinance as yf
+import investpy
+import xlwings as xw
+import matplotlib.pyplot as plt
+import numpy as np
+import datetime as dt
+import calendar
+
+#TOKEN BCRA
+autorizacion = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+tabla = pd.read_html("https://www.rava.com/empresas/bonos.php")
+
+def obtieneBonos():
+    dolares_tf = tabla[19]
+    columnas = list(dolares_tf.iloc[0])
+    dolares_tf.columns = columnas
+    dolares_tf.drop([0], axis = 0, inplace = True)
+    dolares_tf = dolares_tf.drop(dolares_tf[dolares_tf["DM"] == "--"].index)
+    dolares_tf = dolares_tf.drop(dolares_tf[dolares_tf["TIR"] == "--"].index)
+    dolares_tf.reset_index(drop=True, inplace=True)
+    return dolares_tf
+
+
+
+def obtieneCoordenadas(tabla):
+    tabla['TIR'] = tabla['TIR'].map(lambda x: x.rstrip('%').rstrip('aAbBcC'))
+    tabla['TIR'] = tabla['TIR'].str.replace(",", ".").astype(float)
+    tabla["DM"] = tabla["DM"].astype(float)
+    tabla["DM"] = tabla["DM"] / 10
+    tabla["TIR"] = tabla["TIR"].astype(float)
+    x = np.array(list(tabla["DM"]))
+    y = np.array(list(tabla["TIR"]))
+    return x,y
+
+
+
+
+def getReservas():
+    url = "https://api.estadisticasbcra.com/reservas"
+    r = requests.get(url, headers = {"Authorization" : autorizacion}).json()
+    df = pd.DataFrame(r)
+    df.set_index("d", inplace = True)
+    return df
+
+
+
+def getCcl():
+    ccl = pd.DataFrame()
+    adr = yf.download("YPF", period= str(1)+'Y' , interval='1d')['Adj Close']
+    local = yf.download("YPFD.BA", period=str(1)+'Y' , interval='1d')['Adj Close']
+    ccl = (local / adr).to_frame()
+    ccl.columns = ['CCL']
+    ccl = ccl.dropna()
+    return ccl
+
+
+def getBlue():
+    r = requests.get("https://www.valordolarblue.com.ar/data.json?ts=1603422008").json()
+    df = pd.DataFrame(r)
+    df.set_index("fecha", inplace = True)
+    return df
+
+def getHist(symbolName):
+    url = "https://www.invertironline.com/api/cotizaciones/history?symbolName="
+    d = dt.datetime.utcnow()
+    anterior = d - (dt.timedelta(days=31))
+    unixtime = str(calendar.timegm(d.utctimetuple()))
+    unixtime_desde = str(calendar.timegm(anterior.utctimetuple()))
+    end = "&exchange=BCBA&from=" + unixtime_desde + "&to=" + unixtime + "&resolution=D"
+    serie = (requests.get(url + symbolName + end)).json()
+    serie = pd.DataFrame.from_dict(serie)
+    
+    fecha = []
+    cierre = []
+    volumen = []
+    for i in range(0, len(serie)):
+        fecha.append((dt.datetime.fromtimestamp(serie.iloc[i][0]["time"]).date()))
+        cierre.append(serie.iloc[i][0]["close"])
+        volumen.append(serie.iloc[i][0]["volume"])
+    tabla = pd.DataFrame()
+    tabla["fecha"] = fecha
+    tabla["close"] = cierre
+    tabla["volume"] = volumen
+    return tabla.tail(20)
+
+
+def getMerv():
+    merval = investpy.indices.get_index_historical_data("S&P Merval", "Argentina", "01/10/2020", "23/10/2020", as_json=False, order='ascending', interval='Daily')
+    return merval
+
+
+def obtieneRecaudacion():
+    wb = xw.Book('C:\\Users\\jtisi\\Desktop\\PYTHON\\comparativo.septiembre20.xls')
+    actual = []
+    anterior = []
+    hoja = wb.sheets("1")
+    actual.append(hoja["B11"].value)
+    anterior.append(hoja["C11"].value)
+    for i in range(2,10):
+        hoja = wb.sheets(str(i))
+        actual.append(hoja["G11"].value)
+        anterior.append(hoja["H11"].value)
+        archivo = "C:\\Users\\jtisi\\Desktop\\PYTHON\coeficientes.xlsx"
+
+    df_coeficientes = pd.read_excel(archivo)
+    for i in range(0,9):
+        anterior[i] = anterior[i] * df_coeficientes.COEFICIENTE.iloc[i]
+        actual[i] = actual[i] * df_coeficientes.COEFICIENTE.iloc[1+12]
+    return anterior, actual
+    
+
+# OBTIENE DATOS
+reservas = getReservas()
+reservas = reservas[(reservas.index > "2020-10-01")]
+ccl = getCcl()
+ccl = ccl[(ccl.index > "2020-10-01")]
+blue = getBlue()["blue_venta"]
+blue = blue[(blue.index > "2020-10-01")]
+oficial = getBlue()["oficial_venta"]
+oficial = oficial[(oficial.index > "2020-10-01")]
+merval = getMerv()["Close"]
+merval = merval[(merval.index > "2020-10-01")]
+mervalccl = merval / ccl.CCL
+al30 = getHist("AL30").set_index("fecha")
+al30d = getHist("AL30D").set_index("fecha")
+mep = al30.close / al30d.close
+dolares_tf = obtieneBonos()
+x, y  = obtieneCoordenadas(dolares_tf)
+z = np.polyfit(x, y, 2, full=True)
+anterior, actual = obtieneRecaudacion()
+
+# GRAFICA
+fig, axs = plt.subplots(nrows = 3, ncols = 3, figsize=(14,10))
+fig.autofmt_xdate() 
+
+axs[0][0].plot(reservas, c = "b")
+axs[0][0].set_title("RESERVAS-OCTUBRE")
+axs[0][0].grid()
+axs[0][1].plot(ccl, c = "r")
+axs[0][1].set_title("DOLAR CCL - OCTUBRE")
+axs[0][1].grid()
+axs[0][2].plot(blue, c = "r")
+axs[0][2].set_title("DOLAR BLUE - OCTUBRE")
+axs[0][2].grid()
+axs[1][0].plot(oficial, c = "r")
+axs[1][0].set_title("DOLAR OFICIAL - OCTUBRE")
+axs[1][0].grid()
+axs[1][1].plot(x, y, 'o')
+axs[1][1].set_title("BONOS DOLAR")
+
+xp = np.linspace(5, 9, 100)
+coefs, error, *_ = z
+p = np.poly1d(coefs)
+ts = []
+for i in range(0, len(dolares_tf)):
+    ts.append(axs[1][1].text(x[i], y[i], dolares_tf.iloc[i]["Especie"]))
+axs[1][1].plot(xp, p(xp))
+axs[1][1].set_ylabel("TIR")
+axs[1][1].grid()
+axs[1][2].plot(range(1,10), anterior)
+axs[1][2].plot(range(1,10), actual)
+axs[1][2].set_title("RECAUDACIÓN ACUMULADA AJUSTADA 2020")
+axs[1][2].legend(["2019", "2020"])
+axs[1][2].grid()
+axs[2][0].plot(merval)
+axs[2][0].grid()
+axs[2][0].set_title("MERVAL PESOS")
+axs[2][1].plot(mervalccl)
+axs[2][1].grid()
+axs[2][1].set_title("MERVAL - CCL")
+axs[2][2].plot(mep)
+axs[2][2].grid()
+axs[2][2].set_title("MEP - AL30")
+plt.show()
