@@ -1,0 +1,81 @@
+import yfinance as yf
+import pandas as pd
+import talib as ta
+import datetime
+import mplfinance as mpf
+
+
+
+tickers = pd.read_excel("tickers.xlsx")
+class accion:
+    def __init__(self, ticker):
+        self.ticker = ticker
+        
+    def serie(self, start='2020-01-01', end=None, sensibilidad=None, escala='linear'):
+        end = datetime.datetime.now().strftime('%Y-%m-%d')
+        data = yf.download(self.ticker, auto_adjust=True, start=start, end=end)
+        return data
+    
+    def cruces(self, media_lenta, media_rapida, start='2020-01-01', end=None, sensibilidad=None, escala='linear'):
+        end = datetime.datetime.now().strftime('%Y-%m-%d')
+        #data = yf.download(self.ticker, auto_adjust=True, start=start, end=end)
+        data = self.serie()
+        data["SMA"+str(media_lenta)] = ta.SMA(data["Close"], timeperiod = media_lenta)
+        data["SMA"+str(media_rapida)] = ta.SMA(data["Close"], timeperiod = media_rapida)
+        data["CrucePos"] = (data["SMA"+str(media_rapida)] > data["SMA"+str(media_lenta)]) & (
+                data["SMA"+str(media_rapida)].shift() < data["SMA"+str(media_lenta)].shift()) 
+        data["CruceNeg"] = (data["SMA"+str(media_rapida)] < data["SMA"+str(media_lenta)]) & (
+                data["SMA"+str(media_rapida)].shift() > data["SMA"+str(media_lenta)].shift())
+        data["Yield"] = ((data.Close / data["Close"].shift()- 1)*100)
+        return data
+
+
+def rendi(data):
+    df_compras = data.loc[data["CrucePos"]==True].Close
+    
+    df_ventas = -(data.loc[data["CruceNeg"]==True].Close)
+    operaciones = pd.concat([df_compras, df_ventas], axis=0)
+    operaciones = operaciones.sort_index()
+    if operaciones.iloc[0] < 0:
+        operaciones = operaciones.iloc[1:]
+        
+    if operaciones.iloc[-1] > 0:
+        operaciones = operaciones.iloc[:-1]
+    operaciones = operaciones.reset_index()
+    
+    ventas = operaciones.iloc[1::2]
+    ventas.columns = ["fecha venta", "venta"]
+    ventas = ventas.reset_index()
+    compras = operaciones.iloc[::2]    
+    compras.columns = ["fecha compra", "compra"]
+    compras = compras.reset_index()
+    rendimiento = pd.concat([compras, ventas], axis = 1)
+    rendimiento["resultado_trade"] = -rendimiento.venta - rendimiento.compra
+    rendimiento["Yield"] = (((-(rendimiento["venta"]) / rendimiento["compra"])-1)*100)
+    return rendimiento.Yield.sum()
+
+rendimientos = []
+
+for i in range(0, len(tickers)):
+    acc = accion(tickers.ticker.iloc[i])
+    data = acc.cruces(20,5)
+    rend = rendi(data)
+    rendimientos.append(rend) 
+
+tickers["rendimientos"] = rendimientos
+tickers.sort_values("rendimientos", ascending = False, inplace=True)
+tickers = tickers.head(4)
+
+fig = mpf.figure(figsize=(12,7))
+
+ax1 = fig.add_subplot(2,2,1,style='yahoo')
+ax2 = fig.add_subplot(2,2,2,style='yahoo')
+ax3 = fig.add_subplot(2,2,3,style='yahoo')
+ax4 = fig.add_subplot(2,2,4,style='yahoo')
+
+mpf.plot((accion(tickers.iloc[0]["ticker"]).serie()),ax=ax1,axtitle=(tickers.iloc[0]["ticker"]), mav=(5,20), xrotation=15)
+mpf.plot((accion(tickers.iloc[1]["ticker"]).serie()),type='candle',ax=ax2,axtitle=(tickers.iloc[1]["ticker"]), mav=(5,20), xrotation=15)
+mpf.plot((accion(tickers.iloc[2]["ticker"]).serie()),ax=ax3,type='candle',axtitle=(tickers.iloc[2]["ticker"]), mav=(5,20), xrotation=15)
+mpf.plot((accion(tickers.iloc[3]["ticker"]).serie()),type='candle',ax=ax4,axtitle=(tickers.iloc[3]["ticker"]), mav=(5,20), xrotation=15)
+
+fig
