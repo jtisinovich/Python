@@ -1,0 +1,42 @@
+import pandas as pd
+import mplfinance as mpf
+import matplotlib.animation as animation
+import json as j
+import requests
+from datetime import datetime
+
+
+
+token = "a9d63e6b935687632ea75dcbe008a9e5d9452f053c192869607ef5441cd1203c"
+
+
+def histoMinute(e="CCCAGG", fsym="BTC", tsym="USD", toTs=None, limit=100, aggregate=1, allData="true"):
+    url = "https://min-api.cryptocompare.com/data/v2/histominute"
+    params = {"api-key" : token, "e" : e, "fsym" : fsym, "tsym" : tsym, "allData" : allData,
+              "toTs" : toTs, "limit" : limit, "aggregate" : aggregate}
+    r = requests.get(url, params=params)
+    js = r.json()["Data"]["Data"]
+    df = pd.DataFrame(js)
+    df.time = pd.to_datetime(df.time, unit="s")
+    df = df.set_index("time").drop(["conversionType", "conversionSymbol"], axis=1)
+    return df
+
+
+pkwargs=dict(type='candle',style="yahoo", mav=(20,5))
+data = histoMinute()
+
+fig, axes = mpf.plot(data,returnfig=True,volume=False,
+                     figsize=(10,5),
+                     title='\n\nBitcoin Live con Medias',**pkwargs)
+ax1 = axes[0]
+
+
+def animate(ival):
+    data = histoMinute()
+    ax1.clear()
+    mpf.plot(data,ax=ax1,**pkwargs)
+    
+
+ani = animation.FuncAnimation(fig, animate, interval=0)
+
+mpf.show()
