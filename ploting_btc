@@ -7,7 +7,7 @@ from datetime import datetime
 
 
 
-token = "a9d63e6b935687632ea75dcbe008a9e5d9452f053c192869607ef5441cd1203c"
+token = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 
 
 def histoMinute(e="CCCAGG", fsym="BTC", tsym="USD", toTs=None, limit=100, aggregate=1, allData="true"):
