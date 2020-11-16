@@ -1,0 +1,22 @@
+import yfinance as yf
+import pandas as pd
+import sqlite3
+
+tickers = pd.read_excel("tickers.xlsx")
+
+def sql_connection():
+    try:
+       conn = sqlite3.connect('cotizacion_nasdaq_100.dbl')
+       return conn
+    except:
+        print("Error")
+
+conn = sql_connection()
+
+for i in range(0, len(tickers)):
+    data = yf.download(tickers.ticker[i])
+    data = data.reset_index()
+    data.to_sql(tickers.ticker[i], conn, if_exists='replace', index = False)
+conn.commit()
+
+conn.close()
