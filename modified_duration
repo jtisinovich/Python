@@ -1,0 +1,45 @@
+import datetime
+
+lista = [(datetime.datetime(2021, 7, 9, 0, 0), 0.1059),
+ (datetime.datetime(2022, 1, 9, 0, 0), 0.5625),
+ (datetime.datetime(2022, 7, 9, 0, 0), 0.5625),
+ (datetime.datetime(2023, 1, 9, 0, 0), 0.75),
+ (datetime.datetime(2023, 7, 9, 0, 0), 0.75),
+ (datetime.datetime(2024, 1, 9, 0, 0), 1.8125),
+ (datetime.datetime(2024, 7, 9, 0, 0), 1.8125),
+ (datetime.datetime(2025, 1, 9, 0, 0), 2.0625),
+ (datetime.datetime(2025, 7, 9, 0, 0), 2.0625),
+ (datetime.datetime(2026, 1, 9, 0, 0), 2.0625),
+ (datetime.datetime(2026, 7, 9, 0, 0), 2.0625),
+ (datetime.datetime(2027, 1, 9, 0, 0), 2.0625),
+ (datetime.datetime(2027, 7, 9, 0, 0), 2.0625),
+ (datetime.datetime(2028, 1, 9, 0, 0), 2.375),
+ (datetime.datetime(2028, 7, 9, 0, 0), 2.375),
+ (datetime.datetime(2029, 1, 9, 0, 0), 2.5),
+ (datetime.datetime(2029, 7, 9, 0, 0), 2.5),
+ (datetime.datetime(2030, 1, 9, 0, 0), 2.5),
+ (datetime.datetime(2030, 7, 9, 0, 0), 2.5),
+ (datetime.datetime(2031, 1, 9, 0, 0), 12.5),
+ (datetime.datetime(2031, 7, 9, 0, 0), 12.25),
+ (datetime.datetime(2032, 1, 9, 0, 0), 12.0),
+ (datetime.datetime(2032, 7, 9, 0, 0), 11.75),
+ (datetime.datetime(2033, 1, 9, 0, 0), 11.5),
+ (datetime.datetime(2033, 7, 9, 0, 0), 11.25),
+ (datetime.datetime(2034, 1, 9, 0, 0), 11.0),
+ (datetime.datetime(2034, 7, 9, 0, 0), 10.75),
+ (datetime.datetime(2035, 1, 9, 0, 0), 10.5),
+ (datetime.datetime(2035, 7, 9, 0, 0), 10.25)]
+
+
+tir = 0.17682253975257445
+
+def calculaDm(flujos, rate, cotizacion):
+    
+        first_date = min([x[0] for x in flujos])
+        dcf = [(((x[0] - first_date).days / 365) *      x[1]) /
+               (((1 + rate) ** ((x[0] - first_date).days / 365))) for x in flujos]
+        return sum(dcf) / cotizacion
+    
+    
+cotizacion = 31.2
+dm = calculaDm(lista, tir, cotizacion)
