@@ -30,16 +30,19 @@ lista = [(datetime.datetime(2021, 7, 9, 0, 0), 0.1059),
  (datetime.datetime(2035, 1, 9, 0, 0), 10.5),
  (datetime.datetime(2035, 7, 9, 0, 0), 10.25)]
 
+hoy = datetime.datetime(2021, 5, 13, 0, 0)
 
 tir = 0.17682253975257445
 
 def calculaDm(flujos, rate, cotizacion):
     
-        first_date = min([x[0] for x in flujos])
+        #first_date = min([x[0] for x in flujos])
+        first_date = hoy
         dcf = [(((x[0] - first_date).days / 365) *      x[1]) /
                (((1 + rate) ** ((x[0] - first_date).days / 365))) for x in flujos]
-        return sum(dcf) / cotizacion
-    
+        macaulay = sum(dcf) / cotizacion
+        dm = macaulay /    (1 + rate)
+        return dm
     
 cotizacion = 31.2
 dm = calculaDm(lista, tir, cotizacion)
